@@ -8,8 +8,20 @@ class Task(models.Model):
         ("high", "High"),
     ]
 
-    task = models.CharField(max_length=127, unique=True)
-    description = models.TextField(blank=True, null=True, max_length=255)
+    task = models.CharField(
+        "Aufgabe",
+        max_length=127,
+        unique=True,
+        error_messages={"unique": "Eine Aufgabe mit diesem Namen existiert bereits."},
+    )
+
+    description = models.TextField(
+        "Beschreibung",
+        blank=True,
+        null=True,
+        max_length=255,
+    )
+
     priority = models.CharField(
         max_length=7, choices=PRIORITY_CHOICES, default="middle"
     )
