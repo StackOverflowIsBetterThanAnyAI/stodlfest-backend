@@ -14,18 +14,17 @@ class Task(models.Model):
         unique=True,
         error_messages={"unique": "Eine Aufgabe mit diesem Namen existiert bereits."},
     )
-
     description = models.TextField(
         "Beschreibung",
         blank=True,
         null=True,
         max_length=255,
     )
-
     priority = models.CharField(
         max_length=7, choices=PRIORITY_CHOICES, default="middle"
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    finished = models.BooleanField("Erledigt", default=False)
 
     def __str__(self):
         return self.task
