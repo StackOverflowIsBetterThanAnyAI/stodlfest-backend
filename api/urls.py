@@ -1,8 +1,9 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import TaskViewSet
+from .views import MemberViewSet, TaskViewSet
 
 router = DefaultRouter()
+router.register(r"members", MemberViewSet, basename="member")
 router.register(r"tasks", TaskViewSet, basename="task")
 
 urlpatterns = [

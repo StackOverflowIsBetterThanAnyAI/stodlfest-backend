@@ -1,6 +1,20 @@
 from django.db import models
 
 
+class Member(models.Model):
+    AGE_CHOICES = [
+        ("underage", "Underage"),
+        ("ofLegalAge", "Of Legal Age"),
+    ]
+
+    name = models.CharField(max_length=63)
+    surname = models.CharField(max_length=63)
+    age = models.CharField(max_length=15, choices=AGE_CHOICES)
+
+    def __str__(self):
+        return f"{self.name} {self.surname}"
+
+
 class Task(models.Model):
     PRIORITY_CHOICES = [
         ("low", "Low"),

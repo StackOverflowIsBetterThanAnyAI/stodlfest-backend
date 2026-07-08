@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import Task
+from .models import Member, Task
+
+
+class MemberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Member
+        fields = ["surname", "name", "age", "id"]
 
 
 class TaskSerializer(serializers.ModelSerializer):
