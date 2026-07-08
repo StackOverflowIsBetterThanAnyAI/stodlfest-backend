@@ -7,9 +7,18 @@ class Member(models.Model):
         ("ofLegalAge", "Of Legal Age"),
     ]
 
-    name = models.CharField(max_length=63)
-    surname = models.CharField(max_length=63)
-    age = models.CharField(max_length=15, choices=AGE_CHOICES)
+    name = models.CharField("Name", max_length=63)
+    surname = models.CharField("Nachname", max_length=63)
+    age = models.CharField("Alter", max_length=15, choices=AGE_CHOICES)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "surname"],
+                name="unique_member_fullname",
+                violation_error_message="Ein Mitglied mit diesem Namen und Nachnamen existiert bereits.",
+            )
+        ]
 
     def __str__(self):
         return f"{self.name} {self.surname}"
