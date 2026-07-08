@@ -10,6 +10,7 @@ class Member(models.Model):
     name = models.CharField("Name", max_length=63)
     surname = models.CharField("Nachname", max_length=63)
     age = models.CharField("Alter", max_length=15, choices=AGE_CHOICES)
+    job = models.CharField("Beruf", max_length=63, blank=True, null=True)
 
     class Meta:
         constraints = [

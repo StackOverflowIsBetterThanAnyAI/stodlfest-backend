@@ -5,7 +5,7 @@ from .models import Member, Task
 class MemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = Member
-        fields = ["surname", "name", "age", "id"]
+        fields = ["surname", "name", "age", "job", "id"]
 
 
 class TaskSerializer(serializers.ModelSerializer):
