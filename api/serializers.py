@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import Member, Task
+from .models import Job, Member, Task
+
+
+class JobSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Job
+        fields = ["job", "workers", "id"]
 
 
 class MemberSerializer(serializers.ModelSerializer):

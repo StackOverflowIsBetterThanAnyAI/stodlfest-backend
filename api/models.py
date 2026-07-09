@@ -1,4 +1,25 @@
 from django.db import models
+from django.core.validators import MaxValueValidator, MinValueValidator
+
+
+class Job(models.Model):
+    job = models.CharField(
+        "Arbeit",
+        max_length=63,
+        unique=True,
+        error_messages={"unique": "Eine Arbeit mit diesem Namen existiert bereits."},
+    )
+    workers = models.PositiveIntegerField(
+        "Helfer",
+        validators=[MinValueValidator(1), MaxValueValidator(15)],
+        error_messages={
+            "min_value": "Es muss mindestens 1 Helfer zugewiesen werden.",
+            "max_value": "Es dürfen maximal 15 Helfer zugewiesen werden.",
+        },
+    )
+
+    def __str__(self):
+        return self.job
 
 
 class Member(models.Model):

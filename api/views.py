@@ -1,6 +1,11 @@
 from rest_framework import viewsets
-from .models import Member, Task
-from .serializers import MemberSerializer, TaskSerializer
+from .models import Job, Member, Task
+from .serializers import JobSerializer, MemberSerializer, TaskSerializer
+
+
+class JobViewSet(viewsets.ModelViewSet):
+    queryset = Job.objects.all().order_by("job")
+    serializer_class = JobSerializer
 
 
 class MemberViewSet(viewsets.ModelViewSet):
