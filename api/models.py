@@ -4,19 +4,20 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 
 class Job(models.Model):
     job = models.CharField(
-        "Arbeit",
+        "Aufgabe",
         max_length=63,
         unique=True,
         error_messages={"unique": "Eine Arbeit mit diesem Namen existiert bereits."},
     )
     workers = models.PositiveIntegerField(
-        "Helfer",
+        "Benötigte Helfer",
         validators=[MinValueValidator(1), MaxValueValidator(15)],
         error_messages={
             "min_value": "Es muss mindestens 1 Helfer zugewiesen werden.",
             "max_value": "Es dürfen maximal 15 Helfer zugewiesen werden.",
         },
     )
+    requires_legal_age = models.BooleanField("Nur für Volljährige", default=False)
 
     def __str__(self):
         return self.job
@@ -31,7 +32,14 @@ class Member(models.Model):
     name = models.CharField("Name", max_length=63)
     surname = models.CharField("Nachname", max_length=63)
     age = models.CharField("Alter", max_length=15, choices=AGE_CHOICES)
-    job = models.CharField("Beruf", max_length=63, blank=True, null=True)
+    job = models.ForeignKey(
+        Job,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_members",
+        verbose_name="Zugewiesene Aufgabe",
+    )
 
     class Meta:
         constraints = [
