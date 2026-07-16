@@ -17,7 +17,13 @@ class Job(models.Model):
             "max_value": "Es dürfen maximal 15 Helfer zugewiesen werden.",
         },
     )
-    requires_legal_age = models.BooleanField("Nur für Volljährige", default=False)
+    AGE_CHOICES = [
+        ("doesRequireLegalAge", "Does Require Legal Age"),
+        ("doesNotRequireLegalAge", "Does Not Require Legal Age"),
+    ]
+    requires_legal_age = models.CharField(
+        "Nur für Volljährige", max_length=23, choices=AGE_CHOICES
+    )
 
     def __str__(self):
         return self.job
