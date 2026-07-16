@@ -14,5 +14,5 @@ class MemberViewSet(viewsets.ModelViewSet):
 
 
 class TaskViewSet(viewsets.ModelViewSet):
-    queryset = Task.objects.all().order_by("-created_at")
+    queryset = Task.objects.all().order_by("-moved_at")
     serializer_class = TaskSerializer

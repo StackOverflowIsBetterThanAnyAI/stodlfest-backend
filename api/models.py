@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.utils import timezone
 
 
 class Job(models.Model):
@@ -82,8 +83,18 @@ class Task(models.Model):
     priority = models.CharField(
         max_length=7, choices=PRIORITY_CHOICES, default="middle"
     )
-    created_at = models.DateTimeField(auto_now_add=True)
     finished = models.BooleanField("Erledigt", default=False)
+    moved_at = models.DateTimeField(default=timezone.now)
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            old_status = Task.objects.get(pk=self.pk).finished
+            if old_status != self.finished:
+                self.moved_at = timezone.now()
+        else:
+            self.moved_at = timezone.now()
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.task

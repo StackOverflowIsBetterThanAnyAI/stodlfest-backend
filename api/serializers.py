@@ -36,4 +36,4 @@ class MemberSerializer(serializers.ModelSerializer):
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = ["created_at", "id", "task", "description", "priority", "finished"]
+        fields = ["moved_at", "id", "task", "description", "priority", "finished"]
