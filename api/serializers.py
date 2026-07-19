@@ -12,7 +12,11 @@ class MemberSerializer(serializers.ModelSerializer):
     job = serializers.SlugRelatedField(read_only=True, slug_field="job")
 
     job_id = serializers.PrimaryKeyRelatedField(
-        queryset=Job.objects.all(), source="job", write_only=True, allow_null=True
+        queryset=Job.objects.all(),
+        source="job",
+        write_only=True,
+        allow_null=True,
+        required=False,
     )
 
     class Meta:
