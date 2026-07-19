@@ -15,7 +15,7 @@ class JobViewSet(viewsets.ModelViewSet):
 
 
 class MemberViewSet(viewsets.ModelViewSet):
-    queryset = Member.objects.all().order_by("surname")
+    queryset = Member.objects.all().order_by("surname", "name")
     serializer_class = MemberSerializer
 
 
