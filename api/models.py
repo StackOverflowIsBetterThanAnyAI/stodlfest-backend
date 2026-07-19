@@ -26,6 +26,33 @@ class Job(models.Model):
         "Nur für Volljährige", max_length=23, choices=AGE_CHOICES
     )
 
+    def save(self, *args, **kwargs):
+        if self.pk:
+            old_instance = Job.objects.get(pk=self.pk)
+
+            if (
+                old_instance.requires_legal_age != "doesRequireLegalAge"
+                and self.requires_legal_age == "doesRequireLegalAge"
+            ):
+                self.assigned_members.filter(age="underage").update(job=None)
+
+            if self.workers < old_instance.workers:
+                current_members = self.assigned_members.all()
+                current_count = current_members.count()
+
+                if current_count > self.workers:
+                    excess_amount = current_count - self.workers
+
+                    members_to_remove = current_members.order_by("-surname", "-name")[
+                        :excess_amount
+                    ]
+
+                    ids_to_remove = [m.id for m in members_to_remove]
+
+                    self.assigned_members.filter(id__in=ids_to_remove).update(job=None)
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.job
 
