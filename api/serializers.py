@@ -9,6 +9,8 @@ class JobSerializer(serializers.ModelSerializer):
 
 
 class MemberSerializer(serializers.ModelSerializer):
+    job = serializers.SlugRelatedField(read_only=True, slug_field="job")
+
     class Meta:
         model = Member
         fields = ["surname", "name", "age", "job", "id"]
