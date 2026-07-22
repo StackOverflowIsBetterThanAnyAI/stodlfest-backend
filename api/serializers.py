@@ -7,6 +7,19 @@ class JobSerializer(serializers.ModelSerializer):
         model = Job
         fields = ["job", "workers", "requires_legal_age", "id"]
 
+    def validate_job(self, value):
+        queryset = Job.objects.filter(job__iexact=value)
+
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+
+        if queryset.exists():
+            raise serializers.ValidationError(
+                "Eine Aufgabe mit diesem Namen existiert bereits."
+            )
+
+        return value
+
 
 class MemberSerializer(serializers.ModelSerializer):
     job = serializers.SlugRelatedField(read_only=True, slug_field="job")
@@ -22,6 +35,27 @@ class MemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = Member
         fields = ["surname", "name", "age", "job", "job_id", "id"]
+
+    def validate(self, attrs):
+        name = attrs.get("name", getattr(self.instance, "name", None))
+        surname = attrs.get("surname", getattr(self.instance, "surname", None))
+
+        if name and surname:
+            queryset = Member.objects.filter(name__iexact=name, surname__iexact=surname)
+
+            if self.instance:
+                queryset = queryset.exclude(pk=self.instance.pk)
+
+            if queryset.exists():
+                raise serializers.ValidationError(
+                    {
+                        "non_field_errors": [
+                            "Ein Mitglied mit diesem Namen und Nachnamen existiert bereits."
+                        ]
+                    }
+                )
+
+        return attrs
 
     def validate_job_id(self, value):
         if value is None:
@@ -55,3 +89,16 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = ["moved_at", "id", "task", "description", "priority", "finished"]
+
+    def validate_task(self, value):
+        queryset = Task.objects.filter(task__iexact=value)
+
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+
+        if queryset.exists():
+            raise serializers.ValidationError(
+                "Eine Aufgabe mit diesem Namen existiert bereits."
+            )
+
+        return value

@@ -7,8 +7,6 @@ class Job(models.Model):
     job = models.CharField(
         "Aufgabe",
         max_length=63,
-        unique=True,
-        error_messages={"unique": "Eine Arbeit mit diesem Namen existiert bereits."},
     )
     workers = models.PositiveIntegerField(
         "Benötigte Helfer",
@@ -75,15 +73,6 @@ class Member(models.Model):
         verbose_name="Zugewiesene Aufgabe",
     )
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["name", "surname"],
-                name="unique_member_fullname",
-                violation_error_message="Ein Mitglied mit diesem Namen und Nachnamen existiert bereits.",
-            )
-        ]
-
     def __str__(self):
         return f"{self.name} {self.surname}"
 
@@ -98,8 +87,6 @@ class Task(models.Model):
     task = models.CharField(
         "Aufgabe",
         max_length=127,
-        unique=True,
-        error_messages={"unique": "Eine Aufgabe mit diesem Namen existiert bereits."},
     )
     description = models.TextField(
         "Beschreibung",
