@@ -114,9 +114,16 @@ STATIC_URL = "static/"
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://deine-app.vercel.app",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+ALLOWED_HOSTS = [
+    "stodlfest-backend.onrender.com",
+    "localhost",
+    "127.0.0.1",
+]
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
