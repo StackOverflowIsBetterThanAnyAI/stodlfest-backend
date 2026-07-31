@@ -29,20 +29,50 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 class GeminiChatView(viewsets.ViewSet):
     def create(self, request):
-        question = request.data.get("question", "")
+        chat_history = request.data
 
-        if not question:
+        if not isinstance(chat_history, list) or not chat_history:
             return Response(
-                {"error": "Keine Frage angegeben."},
+                {"error": "Invalid Chat History."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        api_key = getattr(settings, "GEMINI_API_KEY", None)
+        if not api_key:
+            return Response(
+                {"error": "No API Key."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
         try:
-            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            client = genai.Client(api_key=api_key)
+
+            formatted_contents = []
+            for entry in chat_history:
+                raw_message = entry.get("message", "")
+                message = (
+                    raw_message.strip() if isinstance(raw_message, str) else raw_message
+                )
+
+                if not message:
+                    continue
+
+                role = "model" if entry.get("role") == "bot" else "user"
+
+                formatted_contents.append({"role": role, "parts": [{"text": message}]})
+
+            while formatted_contents and formatted_contents[-1]["role"] == "model":
+                formatted_contents.pop()
+
+            if not formatted_contents:
+                return Response(
+                    {"error": "No valid Question."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             response = client.models.generate_content(
                 model="gemini-3.5-flash-lite",
-                contents=question,
+                contents=formatted_contents,
                 config={
                     "system_instruction": "Please only answer in German. Keep yourself as short as possible."
                 },
@@ -51,8 +81,8 @@ class GeminiChatView(viewsets.ViewSet):
             return Response({"output_text": response.text})
 
         except Exception as e:
-            print("Gemini API Error:", e)
+            print(f"Gemini API Error: {type(e).__name__}: {e}")
             return Response(
-                {"error": "Fehler beim Abrufen der Antwort. Bitte versuche es erneut."},
+                {"error": f"Error while communicating with Gemini: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
