@@ -4,7 +4,7 @@ from django.conf import settings
 from google import genai
 from google.genai import types
 
-from api.services.chatbot_tools import create_member, get_knowledge_base
+from api.services.chatbot_tools import create_member, delete_member, get_knowledge_base
 from .models import Job, Member, Task
 from .serializers import JobSerializer, MemberSerializer, TaskSerializer
 
@@ -76,7 +76,7 @@ class GeminiChatView(viewsets.ViewSet):
 
             config = types.GenerateContentConfig(
                 system_instruction=system_instruction,
-                tools=[create_member],
+                tools=[create_member, delete_member],
                 temperature=0.15,
             )
 

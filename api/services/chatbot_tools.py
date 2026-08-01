@@ -17,6 +17,34 @@ def create_member(name: str, surname: str, age: str) -> str:
     return f"Erfolg: Das Mitglied {member.name} {member.surname} (ID: {member.id}, Status: {member.age}) wurde erfolgreich in der Datenbank angelegt."
 
 
+def delete_member(name: str, surname: str = "") -> str:
+    name_clean = name.strip()
+    surname_clean = surname.strip()
+
+    query = Member.objects.filter(name__iexact=name_clean)
+    if surname_clean:
+        query = query.filter(surname__iexact=surname_clean)
+
+    members = list(query)
+
+    if not members:
+        search_term = f"{name_clean} {surname_clean}".strip()
+        return f"Fehler: Kein Mitglied mit dem Namen '{search_term}' in der Datenbank gefunden."
+
+    if len(members) > 1:
+        found_names = [f"{m.name} {m.surname} (ID: {m.id})" for m in members]
+        return (
+            f"Fehler: Es wurden mehrere Personen gefunden: {', '.join(found_names)}. "
+            "Bitte gib den Nachnamen genauer an."
+        )
+
+    member_to_delete = members[0]
+    full_name = f"{member_to_delete.name} {member_to_delete.surname}"
+    member_to_delete.delete()
+
+    return f"Erfolg: Das Mitglied {full_name} wurde erfolgreich aus der Datenbank gelöscht."
+
+
 def get_knowledge_base():
     jobs = Job.objects.prefetch_related("assigned_members").all()
     job_strings = []
