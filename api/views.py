@@ -2,6 +2,9 @@ from rest_framework import status, viewsets
 from rest_framework.response import Response
 from django.conf import settings
 from google import genai
+from google.genai import types
+
+from api.services.chatbot_tools import create_member, get_knowledge_base
 from .models import Job, Member, Task
 from .serializers import JobSerializer, MemberSerializer, TaskSerializer
 
@@ -25,91 +28,6 @@ class MemberViewSet(viewsets.ModelViewSet):
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all().order_by("-moved_at")
     serializer_class = TaskSerializer
-
-
-def get_knowledge_base():
-    jobs = Job.objects.prefetch_related("assigned_members").all()
-    job_strings = []
-
-    for j in jobs:
-        legal_req = (
-            "Ja (Nur Volljährige)"
-            if j.requires_legal_age == "doesRequireLegalAge"
-            else "Nein (Auch Minderjährige)"
-        )
-        assigned_members = j.assigned_members.all()
-        current_count = assigned_members.count()
-        missing_workers = j.workers - current_count
-
-        assigned_names = [f"{m.name} {m.surname}" for m in assigned_members]
-        names_str = (
-            ", ".join(assigned_names)
-            if assigned_names
-            else "Keine Helfer bisher zugewiesen"
-        )
-
-        job_strings.append(
-            f"- Job: '{j.job}' | Benötigte Helfer: {j.workers} | Aktuell zugewiesen: {current_count} ({names_str}) | "
-            f"Noch benötigte Helfer: {max(0, missing_workers)} | Volljährigkeit erforderlich: {legal_req}"
-        )
-
-    jobs_knowledge = (
-        "\n".join(job_strings) if job_strings else "Keine Jobs eingetragen."
-    )
-
-    members = Member.objects.select_related("job").all()
-    member_strings = []
-
-    for m in members:
-        age_str = "Volljährig" if m.age == "ofLegalAge" else "Minderjährig"
-        assigned_job = m.job.job if m.job else "Kein Job zugewiesen"
-
-        member_strings.append(
-            f"- Mitglied: {m.name} {m.surname} | Alter: {age_str} | Zugewiesene Aufgabe: '{assigned_job}'"
-        )
-
-    members_knowledge = (
-        "\n".join(member_strings) if member_strings else "Keine Mitglieder eingetragen."
-    )
-
-    tasks = Task.objects.all()
-    task_strings = []
-
-    priority_map = {"low": "Niedrig", "middle": "Mittel", "high": "Hoch"}
-
-    for t in tasks:
-        status_str = "Erledigt" if t.finished else "Ausstehend"
-        prio_str = priority_map.get(t.priority, t.priority)
-        desc_str = f" | Beschreibung: {t.description}" if t.description else ""
-
-        task_strings.append(
-            f"- Aufgabe: '{t.task}' | Status: {status_str} | Priorität: {prio_str}{desc_str}"
-        )
-
-    tasks_knowledge = (
-        "\n".join(task_strings) if task_strings else "Keine Aufgaben eingetragen."
-    )
-
-    system_instruction = f"""
-        You are the official, helpful AI assistant for the organization of the Stodlfest.
-        This event takes place in Altheim, Niederbayern, Germany, on September 05 - 06 2026 between 18:30 and 02:00.
-        It is organized by a groud of local volunteers and helpers, who are all members of the KLJB Altheim.
-        Please only answer in German.
-        Keep yourself as short as possible and stay helpful and friendly at the same time.
-        Your task is to answer questions only based on the current database information.
-        If there are no data available for a specific question (e.g., a person does not exist), please inform the user politely that there is no data available in the database.
-        The following information is available in the database:
-
-        --- CURRENT JOBS AND SHIFTS ---
-        {jobs_knowledge}
-
-        --- AVAILABLE MEMBERS AND WORKERS ---
-        {members_knowledge}
-
-        --- TO-DO LIST AND PREPARATION TASKS ---
-        {tasks_knowledge}
-    """
-    return system_instruction
 
 
 class GeminiChatView(viewsets.ViewSet):
@@ -156,10 +74,16 @@ class GeminiChatView(viewsets.ViewSet):
 
             system_instruction = get_knowledge_base()
 
+            config = types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                tools=[create_member],
+                temperature=0.15,
+            )
+
             response = client.models.generate_content(
                 model="gemini-3.5-flash-lite",
                 contents=formatted_contents,
-                config={"system_instruction": system_instruction},
+                config=config,
             )
 
             return Response({"output_text": response.text})
