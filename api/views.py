@@ -8,7 +8,9 @@ from api.services.chatbot_tools import (
     create_member,
     create_task,
     delete_member,
+    delete_task,
     get_knowledge_base,
+    update_task,
 )
 from .models import Job, Member, Task
 from .serializers import JobSerializer, MemberSerializer, TaskSerializer
@@ -81,7 +83,13 @@ class GeminiChatView(viewsets.ViewSet):
 
             config = types.GenerateContentConfig(
                 system_instruction=system_instruction,
-                tools=[create_member, create_task, delete_member],
+                tools=[
+                    create_member,
+                    create_task,
+                    delete_member,
+                    delete_task,
+                    update_task,
+                ],
                 temperature=0.15,
             )
 

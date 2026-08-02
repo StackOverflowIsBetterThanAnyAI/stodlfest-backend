@@ -16,17 +16,111 @@ def create_task(
         )
 
     priority_clean = priority.strip().lower()
-    if priority_clean not in ["low", "middle", "high"]:
-        priority_clean = "middle"
+
+    prio_map = {
+        "hoch": "high",
+        "high": "high",
+        "mittel": "middle",
+        "middle": "middle",
+        "niedrig": "low",
+        "low": "low",
+    }
+
+    final_priority = prio_map.get(priority_clean, "middle")
 
     task_instance = Task.objects.create(
         task=task_clean,
-        priority=priority_clean,
+        priority=final_priority,
         description=description.strip(),
         finished=finished,
     )
 
     return f"Erfolg: Die Aufgabe '{task_instance.task}' mit der Priorität {task_instance.priority}) wurde erfolgreich angelegt."
+
+
+def update_task(
+    task_identifier: str,
+    new_title: str = "",
+    description: str = "",
+    priority: str = "",
+    finished: bool = None,
+) -> str:
+    task_clean = task_identifier.strip()
+    tasks = list(Task.objects.filter(task__iexact=task_clean))
+
+    if not tasks:
+        tasks = list(Task.objects.filter(task__icontains=task_clean))
+
+    if not tasks:
+        return f"Fehler: Keine Aufgabe gefunden, die zu '{task_clean}' passt."
+
+    if len(tasks) > 1:
+        found_titles = [f"'{t.task}'" for t in tasks]
+        return f"Fehler: Es wurden mehrere Aufgaben gefunden ({', '.join(found_titles)}). Bitte spezifiziere die Aufgabe genauer."
+
+    task_obj = tasks[0]
+    updated_fields = []
+
+    if finished is not None:
+        is_finished = finished
+        if isinstance(finished, str):
+            is_finished = finished.strip().lower() in ["true", "1", "yes", "ja"]
+
+        task_obj.finished = is_finished
+        status_text = "erledigt" if is_finished else "wiederhergestellt (offen)"
+        updated_fields.append(f"Status auf '{status_text}' gesetzt")
+
+    if new_title and new_title.strip():
+        old_title = task_obj.task
+        task_obj.task = new_title.strip()
+        updated_fields.append(f"Titel von '{old_title}' zu '{task_obj.task}' geändert")
+
+    if description and description.strip():
+        task_obj.description = description.strip()
+        updated_fields.append("Beschreibung aktualisiert")
+
+    if priority and priority.strip():
+        prio_map = {
+            "hoch": "high",
+            "high": "high",
+            "mittel": "middle",
+            "middle": "middle",
+            "niedrig": "low",
+            "low": "low",
+        }
+        mapped_prio = prio_map.get(priority.strip().lower())
+
+        if mapped_prio:
+            task_obj.priority = mapped_prio
+            updated_fields.append(f"Priorität auf '{mapped_prio}' geändert")
+
+    if not updated_fields:
+        return f"Hinweis: Für die Aufgabe '{task_obj.task}' wurden keine auswertbaren Änderungen übergeben."
+
+    task_obj.save()
+
+    return f"Erfolg: Die Aufgabe '{task_obj.task}' wurde aktualisiert: {', '.join(updated_fields)}."
+
+
+def delete_task(task_identifier: str) -> str:
+    task_clean = task_identifier.strip()
+    tasks = list(Task.objects.filter(task__iexact=task_clean))
+
+    if not tasks:
+        tasks = list(Task.objects.filter(task__icontains=task_clean))
+
+    if not tasks:
+        return f"Fehler: Keine Aufgabe gefunden, die zu '{task_clean}' passt."
+
+    if len(tasks) > 1:
+        found_titles = [f"'{t.task}'" for t in tasks]
+        return f"Fehler: Es wurden mehrere passende Aufgaben gefunden: {', '.join(found_titles)}. Bitte gib den Titel genauer an."
+
+    task_to_delete = tasks[0]
+    title = task_to_delete.task
+    task_to_delete.delete()
+
+    return f"Erfolg: Die Aufgabe '{title}' wurde erfolgreich gelöscht."
 
 
 def create_member(name: str, surname: str, age: str) -> str:
@@ -162,6 +256,8 @@ def get_knowledge_base():
         If necessary parameters (first name, surname, or age) are missing, ask the user for clarification before executing the function.
         
         If the user asks to add or create a new preparation task, use the `create_task` tool.
+        If the user asks to edit or update an existing preparation task, use the `update_task` tool.
+        If the user asks to delete an existing preparation task, use the `delete_task` tool.
         If necessary parameters (task, or priority) are missing, ask the user for clarification before executing the function.
         
         Never make up any data or parameters the user has not explicitly provided.
