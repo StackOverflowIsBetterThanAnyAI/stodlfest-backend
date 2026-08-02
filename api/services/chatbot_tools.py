@@ -1,5 +1,128 @@
-from api.models import Job, Task
-from api.models import Member
+from api.models import Job, Member, Task
+
+
+def create_job(
+    job: str, workers: int = 1, requires_legal_age: str = "doesNotRequireLegalAge"
+) -> str:
+    job_clean = job.strip()
+
+    existing_job = Job.objects.filter(job__iexact=job_clean).first()
+    if existing_job:
+        return (
+            f"Hinweis: Eine Aufgabe mit dem Namen '{job_clean}' existiert bereits. "
+            f"Es wurde keine neue Aufgabe angelegt."
+        )
+
+    try:
+        workers_count = int(workers)
+        workers_count = max(1, min(15, workers_count))
+    except (ValueError, TypeError):
+        workers_count = 1
+
+    legal_age_clean = requires_legal_age.strip()
+    if (
+        "doesRequireLegalAge" in legal_age_clean
+        or "ja" in legal_age_clean.lower()
+        or "voll" in legal_age_clean.lower()
+    ):
+        legal_age_val = "doesRequireLegalAge"
+    else:
+        legal_age_val = "doesNotRequireLegalAge"
+
+    job_instance = Job.objects.create(
+        job=job_clean,
+        workers=workers_count,
+        requires_legal_age=legal_age_val,
+    )
+
+    legal_str = (
+        "Ja" if job_instance.requires_legal_age == "doesRequireLegalAge" else "Nein"
+    )
+    return f"Erfolg: Die Aufgabe '{job_instance.job}' (Benötigte Helfer: {job_instance.workers}, Volljährigkeit: {legal_str}) wurde erfolgreich angelegt."
+
+
+def update_job(
+    job_identifier: str,
+    new_title: str = "",
+    workers: int = None,
+    requires_legal_age: str = "",
+) -> str:
+    job_clean = job_identifier.strip()
+    jobs = list(Job.objects.filter(job__iexact=job_clean))
+
+    if not jobs:
+        jobs = list(Job.objects.filter(job__icontains=job_clean))
+
+    if not jobs:
+        return f"Fehler: Keine Aufgabe gefunden, die zu '{job_clean}' passt."
+
+    if len(jobs) > 1:
+        found_titles = [f"'{j.job}'" for j in jobs]
+        return f"Fehler: Es wurden mehrere Aufgaben gefunden ({', '.join(found_titles)}). Bitte spezifiziere die Aufgabe genauer."
+
+    job_obj = jobs[0]
+    updated_fields = []
+
+    if new_title and new_title.strip():
+        old_title = job_obj.job
+        job_obj.job = new_title.strip()
+        updated_fields.append(f"Titel von '{old_title}' zu '{job_obj.job}' geändert")
+
+    if workers is not None:
+        try:
+            workers_count = int(workers)
+            workers_count = max(1, min(15, workers_count))
+            job_obj.workers = workers_count
+            updated_fields.append(f"Benötigte Helfer auf {workers_count} gesetzt")
+        except (ValueError, TypeError):
+            pass
+
+    if requires_legal_age and requires_legal_age.strip():
+        legal_clean = requires_legal_age.strip().lower()
+
+        if any(
+            neg in legal_clean
+            for neg in ["nein", "minderjährig", "underage", "doesnot"]
+        ):
+            new_val = "doesNotRequireLegalAge"
+            legal_str = "Nein (Auch Minderjährige)"
+        else:
+            new_val = "doesRequireLegalAge"
+            legal_str = "Ja (Nur Volljährige)"
+
+        if job_obj.requires_legal_age != new_val:
+            job_obj.requires_legal_age = new_val
+            updated_fields.append(
+                f"Volljährigkeit erforderlich auf '{legal_str}' geändert"
+            )
+
+    if not updated_fields:
+        return f"Hinweis: Für den Job '{job_obj.job}' wurden keine auswertbaren Änderungen übergeben."
+
+    job_obj.save()
+
+    return f"Erfolg: Die Aufgabe '{job_obj.job}' wurde aktualisiert: {', '.join(updated_fields)}."
+
+
+def delete_job(job_identifier: str) -> str:
+    job_clean = job_identifier.strip()
+    jobs = list(Job.objects.filter(job__iexact=job_clean))
+
+    if not jobs:
+        jobs = list(Job.objects.filter(job__icontains=job_clean))
+
+    if not jobs:
+        return f"Fehler: Keine Aufgabe gefunden, die zu '{job_clean}' passt."
+
+    if len(jobs) > 1:
+        found_titles = [f"'{j.job}'" for j in jobs]
+        return f"Fehler: Es wurden mehrere passende Aufgaben gefunden: {', '.join(found_titles)}. Bitte gib den Titel genauer an."
+
+    job_to_delete = jobs[0]
+    title = job_to_delete.job
+    job_to_delete.delete()
+
+    return f"Erfolg: Die Aufgabe '{title}' wurde erfolgreich gelöscht."
 
 
 def create_task(
@@ -255,10 +378,18 @@ def get_knowledge_base():
         If the user asks to add or create a new person, use the `create_member` tool.
         If necessary parameters (first name, surname, or age) are missing, ask the user for clarification before executing the function.
         
+        If the user refers to a preparation task for the event, you can use the following tools to manage them:
+        If the user refers to job in general, ask the user to clarify if they mean a preparation task or a job /shift during the event.
         If the user asks to add or create a new preparation task, use the `create_task` tool.
         If the user asks to edit or update an existing preparation task, use the `update_task` tool.
         If the user asks to delete an existing preparation task, use the `delete_task` tool.
         If necessary parameters (task, or priority) are missing, ask the user for clarification before executing the function.
+
+        If the user refers to a job / shift during the event, you can use the following tools to manage them:
+        If the user asks to add or create a job / shift during the event, use the `create_job` tool.
+        If the user asks to edit or update an existing job / shift during the event, use the `update_job` tool.
+        If the user asks to delete/remove a job/shift during the event, use the `delete_job` tool.
+        If necessary parameters (job, workers, or requires_legal_age) are missing, ask the user for clarification before executing the function.
         
         Never make up any data or parameters the user has not explicitly provided.
         The following information is available in the database:
