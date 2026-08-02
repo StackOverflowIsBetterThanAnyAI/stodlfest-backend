@@ -2,7 +2,47 @@ from api.models import Job, Task
 from api.models import Member
 
 
+def create_task(
+    task: str, priority: str = "middle", description: str = "", finished: bool = False
+) -> str:
+    task_clean = task.strip()
+
+    existing_task = Task.objects.filter(task__iexact=task_clean).first()
+
+    if existing_task:
+        return (
+            f"Hinweis: Eine Aufgabe mit dem Namen '{task_clean}' existiert bereits. "
+            f"Es wurde keine neue Aufgabe angelegt."
+        )
+
+    priority_clean = priority.strip().lower()
+    if priority_clean not in ["low", "middle", "high"]:
+        priority_clean = "middle"
+
+    task_instance = Task.objects.create(
+        task=task_clean,
+        priority=priority_clean,
+        description=description.strip(),
+        finished=finished,
+    )
+
+    return f"Erfolg: Die Aufgabe '{task_instance.task}' mit der Priorität {task_instance.priority}) wurde erfolgreich angelegt."
+
+
 def create_member(name: str, surname: str, age: str) -> str:
+    name_clean = name.strip()
+    surname_clean = surname.strip()
+
+    existing_member = Member.objects.filter(
+        name__iexact=name_clean, surname__iexact=surname_clean
+    ).first()
+
+    if existing_member:
+        return (
+            f"Hinweis: Ein Mitglied mit dem Namen '{name_clean} {surname_clean}' existiert bereits. "
+            f"Es wurde kein neues Mitglied angelegt."
+        )
+
     age_clean = age.strip()
     if age_clean not in ["ofLegalAge", "underage"]:
         if "voll" in age_clean.lower() or "18" in age_clean:
@@ -11,10 +51,10 @@ def create_member(name: str, surname: str, age: str) -> str:
             age_clean = "underage"
 
     member = Member.objects.create(
-        name=name.strip(), surname=surname.strip(), age=age_clean
+        name=name_clean, surname=surname_clean, age=age_clean
     )
 
-    return f"Erfolg: Das Mitglied {member.name} {member.surname} (ID: {member.id}, Status: {member.age}) wurde erfolgreich in der Datenbank angelegt."
+    return f"Erfolg: Das Mitglied {member.name} {member.surname} (Status: {member.age}) wurde erfolgreich angelegt."
 
 
 def delete_member(name: str, surname: str = "") -> str:
@@ -29,7 +69,7 @@ def delete_member(name: str, surname: str = "") -> str:
 
     if not members:
         search_term = f"{name_clean} {surname_clean}".strip()
-        return f"Fehler: Kein Mitglied mit dem Namen '{search_term}' in der Datenbank gefunden."
+        return f"Fehler: Kein Mitglied mit dem Namen '{search_term}' gefunden."
 
     if len(members) > 1:
         found_names = [f"{m.name} {m.surname} (ID: {m.id})" for m in members]
@@ -42,7 +82,7 @@ def delete_member(name: str, surname: str = "") -> str:
     full_name = f"{member_to_delete.name} {member_to_delete.surname}"
     member_to_delete.delete()
 
-    return f"Erfolg: Das Mitglied {full_name} wurde erfolgreich aus der Datenbank gelöscht."
+    return f"Erfolg: Das Mitglied {full_name} wurde erfolgreich gelöscht."
 
 
 def get_knowledge_base():
@@ -117,8 +157,13 @@ def get_knowledge_base():
         Keep yourself as short as possible and stay helpful and friendly at the same time.
         Your task is to answer questions only based on the current database information.
         If there are no data available for a specific question (e.g., a person does not exist), please inform the user politely that there is no data available in the database.
+        
         If the user asks to add or create a new person, use the `create_member` tool.
         If necessary parameters (first name, surname, or age) are missing, ask the user for clarification before executing the function.
+        
+        If the user asks to add or create a new preparation task, use the `create_task` tool.
+        If necessary parameters (task, or priority) are missing, ask the user for clarification before executing the function.
+        
         Never make up any data or parameters the user has not explicitly provided.
         The following information is available in the database:
 
