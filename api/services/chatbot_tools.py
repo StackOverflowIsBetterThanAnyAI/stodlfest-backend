@@ -1,6 +1,87 @@
 from api.models import Job, Member, Task
 
 
+def assign_member_to_job(member_name: str, job_name: str = "") -> str:
+    member_clean = member_name.strip()
+    members = list(
+        Member.objects.filter(name__iexact=member_clean)
+        | Member.objects.filter(surname__iexact=member_clean)
+    )
+
+    if not members:
+        parts = member_clean.split()
+        if len(parts) >= 2:
+            members = list(
+                Member.objects.filter(name__iexact=parts[0], surname__iexact=parts[1])
+            )
+
+    if not members:
+        members = list(
+            Member.objects.filter(name__icontains=member_clean)
+            | Member.objects.filter(surname__icontains=member_clean)
+        )
+
+    if not members:
+        return f"Fehler: Kein Mitglied gefunden, das zu '{member_clean}' passt."
+
+    if len(members) > 1:
+        found_names = [f"{m.name} {m.surname}" for m in members]
+        return f"Fehler: Es wurden mehrere Mitglieder gefunden ({', '.join(found_names)}). Bitte gib den vollständigen Namen an."
+
+    member_obj = members[0]
+    full_member_name = f"{member_obj.name} {member_obj.surname}"
+
+    job_clean = job_name.strip().lower() if job_name else ""
+    if not job_clean or any(
+        remove_kw in job_clean
+        for remove_kw in ["kein", "entfernen", "löschen", "none", "abmelden"]
+    ):
+        if member_obj.job is None:
+            return f"Hinweis: {full_member_name} ist aktuell keiner Aufgabe zugewiesen."
+
+        old_job_title = member_obj.job.job
+        member_obj.job = None
+        member_obj.save()
+        return f"Erfolg: {full_member_name} wurde erfolgreich aus der Aufgabe '{old_job_title}' entfernt."
+
+    jobs = list(Job.objects.filter(job__iexact=job_name.strip()))
+    if not jobs:
+        jobs = list(Job.objects.filter(job__icontains=job_name.strip()))
+
+    if not jobs:
+        return f"Fehler: Keine Aufgabe gefunden, die zu '{job_name}' passt."
+
+    if len(jobs) > 1:
+        found_jobs = [f"'{j.job}'" for j in jobs]
+        return f"Fehler: Es wurden mehrere Aufgaben gefunden ({', '.join(found_jobs)}). Bitte spezifiziere die Aufgabe genauer."
+
+    job_obj = jobs[0]
+
+    if member_obj.job == job_obj:
+        return f"Hinweis: {full_member_name} ist bereits der Aufgabe '{job_obj.job}' zugewiesen."
+
+    if (
+        job_obj.requires_legal_age == "doesRequireLegalAge"
+        and member_obj.age == "underage"
+    ):
+        return (
+            f"Fehler: {full_member_name} ist minderjährig. "
+            f"Die Aufgabe '{job_obj.job}' erfordert jedoch Volljährigkeit!"
+        )
+
+    current_count = job_obj.assigned_members.count()
+    if current_count >= job_obj.workers:
+        return (
+            f"Fehler: Die Aufgabe '{job_obj.job}' ist bereits voll besetzt "
+            f"({current_count}/{job_obj.workers} Plätze belegt)."
+        )
+
+    member_obj.job = job_obj
+    member_obj.save()
+
+    return f"Erfolg: {full_member_name} wurde erfolgreich der Aufgabe '{job_obj.job}' zugewiesen."
+
+
 def create_job(
     job: str, workers: int = 1, requires_legal_age: str = "doesNotRequireLegalAge"
 ) -> str:
@@ -391,6 +472,10 @@ def get_knowledge_base():
         If the user asks to delete/remove a job/shift during the event, use the `delete_job` tool.
         If necessary parameters (job, workers, or requires_legal_age) are missing, ask the user for clarification before executing the function.
         
+        If the user asks to assign a member to a job or remove a member from a job, use the `assign_member_to_job` tool.
+        If necessary parameters (member_name, or job_name) are missing, ask the user for clarification before executing the function.
+        If the user wants to unassign / remove the member from their job, pass `job_name="entfernen"` or leave `job_name` empty.
+
         Never make up any data or parameters the user has not explicitly provided.
         The following information is available in the database:
 

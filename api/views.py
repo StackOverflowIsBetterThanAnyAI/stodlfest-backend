@@ -5,6 +5,7 @@ from google import genai
 from google.genai import types
 
 from api.services.chatbot_tools import (
+    assign_member_to_job,
     create_job,
     create_member,
     create_task,
@@ -87,6 +88,7 @@ class GeminiChatView(viewsets.ViewSet):
             config = types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 tools=[
+                    assign_member_to_job,
                     create_job,
                     create_member,
                     create_task,
