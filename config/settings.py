@@ -8,6 +8,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / ".env")
 
+
+def env_list(name):
+    """Comma separated values of an environment variable, e.g. for CI."""
+    return [value.strip() for value in os.getenv(name, "").split(",") if value.strip()]
+
+
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 DEBUG = os.getenv("DEBUG", "False") == "True"
@@ -116,7 +122,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://stodlfest-frontend.onrender.com",
-]
+] + env_list("EXTRA_CORS_ALLOWED_ORIGINS")
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -124,7 +130,7 @@ ALLOWED_HOSTS = [
     "stodlfest-backend.onrender.com",
     "localhost",
     "127.0.0.1",
-]
+] + env_list("EXTRA_ALLOWED_HOSTS")
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
